@@ -1,0 +1,140 @@
+{
+  "info": {
+    "name": "Telecom NMS",
+    "description": "End-to-end demo. Run the folder from top to bottom. Swagger at /docs has every endpoint.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8000"},
+    {"key": "token", "value": ""},
+    {"key": "customerToken", "value": ""},
+    {"key": "planId", "value": ""},
+    {"key": "customerId", "value": ""},
+    {"key": "simId", "value": ""},
+    {"key": "deviceId", "value": ""},
+    {"key": "subscriptionId", "value": ""},
+    {"key": "towerId", "value": ""},
+    {"key": "outageId", "value": ""},
+    {"key": "ticketId", "value": ""},
+    {"key": "agentId", "value": ""},
+    {"key": "technicianId", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "1. Admin login",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/auth/login",
+        "body": {"mode": "raw", "raw": "{\n  \"email\": \"admin@telecom.local\",\n  \"password\": \"Admin@12345\"\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["const body = pm.response.json();", "pm.collectionVariables.set('token', body.access_token);"]}}]
+    },
+    {
+      "name": "2. Create and activate plan",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/plans",
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"Data 2GB\",\n  \"billing_type\": \"prepaid\",\n  \"category\": \"data\",\n  \"price\": \"199.00\",\n  \"validity_days\": 28,\n  \"data_limit_mb\": 2048,\n  \"sms_limit\": 100\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["const id = pm.response.json().id;", "pm.collectionVariables.set('planId', id);", "pm.sendRequest({url: pm.collectionVariables.get('baseUrl') + '/api/v1/plans/' + id + '/activate', method: 'POST', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('token')}});"]}}]
+    },
+    {
+      "name": "3. Create customer",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/customers",
+        "body": {"mode": "raw", "raw": "{\n  \"customer_type\": \"individual\",\n  \"first_name\": \"Asha\",\n  \"last_name\": \"Rao\",\n  \"date_of_birth\": \"1998-04-12\",\n  \"create_login\": true,\n  \"email\": \"asha@example.com\",\n  \"password\": \"AshaPass1\",\n  \"contacts\": [{\"contact_type\": \"mobile\", \"value\": \"9876543210\", \"is_primary\": true}],\n  \"addresses\": [{\"address_type\": \"service\", \"line1\": \"12 Lake Road\", \"city\": \"Patna\", \"state\": \"Bihar\", \"postal_code\": \"800001\", \"is_primary\": true}]\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["pm.collectionVariables.set('customerId', pm.response.json().id);"]}}]
+    },
+    {
+      "name": "4. Verify KYC and activate customer",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/customers/{{customerId}}/kyc",
+        "body": {"mode": "raw", "raw": "{\n  \"status\": \"submitted\"\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["const base = pm.collectionVariables.get('baseUrl');", "const id = pm.collectionVariables.get('customerId');", "const auth = {Authorization: 'Bearer ' + pm.collectionVariables.get('token'), 'Content-Type': 'application/json'};", "pm.sendRequest({url: base + '/api/v1/customers/' + id + '/kyc', method: 'POST', header: auth, body: {mode: 'raw', raw: JSON.stringify({status: 'verified'})}}, function () {", "  pm.sendRequest({url: base + '/api/v1/customers/' + id + '/activate', method: 'POST', header: auth});", "});"]}}]
+    },
+    {
+      "name": "5. Register SIM",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/sims",
+        "body": {"mode": "raw", "raw": "{\n  \"iccid\": \"89014103211118510720\",\n  \"msisdn\": \"9876543210\",\n  \"sim_type\": \"physical\"\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["pm.collectionVariables.set('simId', pm.response.json().id);"]}}]
+    },
+    {
+      "name": "6. Register device",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/devices",
+        "body": {"mode": "raw", "raw": "{\n  \"imei\": \"490154203237518\",\n  \"model\": \"Nord\",\n  \"manufacturer\": \"OnePlus\",\n  \"device_type\": \"handset\"\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["pm.collectionVariables.set('deviceId', pm.response.json().id);"]}}]
+    },
+    {
+      "name": "7. Activate SIM and map device",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/sims/{{simId}}/activate",
+        "body": {"mode": "raw", "raw": "{\n  \"customer_id\": \"{{customerId}}\"\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["pm.sendRequest({url: pm.collectionVariables.get('baseUrl') + '/api/v1/devices/' + pm.collectionVariables.get('deviceId') + '/map-sim', method: 'POST', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('token'), 'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify({sim_id: pm.collectionVariables.get('simId')})}});"]}}]
+    },
+    {
+      "name": "8. Activate subscription and record usage",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/subscriptions",
+        "body": {"mode": "raw", "raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"sim_id\": \"{{simId}}\",\n  \"plan_id\": \"{{planId}}\"\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["const sub = pm.response.json().id;", "pm.collectionVariables.set('subscriptionId', sub);", "const today = new Date().toISOString().slice(0, 10);", "pm.sendRequest({url: pm.collectionVariables.get('baseUrl') + '/api/v1/usage', method: 'POST', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('token'), 'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify({sim_id: pm.collectionVariables.get('simId'), usage_date: today, data_mb: '100.5', voice_minutes: '0', sms_count: 2})}});"]}}]
+    },
+    {
+      "name": "9. Tower, outage, affected customers",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/towers",
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"Patna Central\",\n  \"tower_type\": \"macro\",\n  \"latitude\": \"25.594100\",\n  \"longitude\": \"85.137600\",\n  \"address\": \"Gandhi Maidan\",\n  \"city\": \"Patna\",\n  \"state\": \"Bihar\",\n  \"coverage_radius_km\": \"3.5\",\n  \"capacity\": 500\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["const towerId = pm.response.json().id;", "pm.collectionVariables.set('towerId', towerId);", "const base = pm.collectionVariables.get('baseUrl');", "const auth = {Authorization: 'Bearer ' + pm.collectionVariables.get('token'), 'Content-Type': 'application/json'};", "pm.sendRequest({url: base + '/api/v1/customers/' + pm.collectionVariables.get('customerId') + '/towers', method: 'POST', header: auth, body: {mode: 'raw', raw: JSON.stringify({tower_id: towerId, is_primary: true})}}, function () {", "  const start = new Date();", "  const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);", "  pm.sendRequest({url: base + '/api/v1/outages', method: 'POST', header: auth, body: {mode: 'raw', raw: JSON.stringify({title: 'Fiber cut', outage_type: 'fiber_cut', severity: 'critical', tower_ids: [towerId], start_time: start.toISOString(), expected_resolution: end.toISOString()})}}, function (err, res) {", "    pm.collectionVariables.set('outageId', res.json().id);", "  });", "});"]}}]
+    },
+    {
+      "name": "10. Customer ticket",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "url": "{{baseUrl}}/api/v1/auth/login",
+        "body": {"mode": "raw", "raw": "{\n  \"email\": \"asha@example.com\",\n  \"password\": \"AshaPass1\"\n}"}
+      },
+      "event": [{"listen": "test", "script": {"exec": ["const token = pm.response.json().access_token;", "pm.collectionVariables.set('customerToken', token);", "pm.sendRequest({url: pm.collectionVariables.get('baseUrl') + '/api/v1/tickets', method: 'POST', header: {Authorization: 'Bearer ' + token, 'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify({ticket_type: 'network_issue', subject: 'No signal', description: 'No service since morning near Gandhi Maidan.', priority: 'high'})}}, function (err, res) { pm.collectionVariables.set('ticketId', res.json().id); });"]}}]
+    },
+    {
+      "name": "11. Dashboard, report, audit",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/api/v1/dashboard/operations"
+      }
+    },
+    {
+      "name": "12. Audit log",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/api/v1/audit-logs?entity=customer"
+      }
+    }
+  ]
+}
